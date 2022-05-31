@@ -1,7 +1,6 @@
-from torch.utils.data import DataLoader
+# lots of this code taken from the PyTorch DCGAN tutorial
+# https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
 
-import argparse
-import os
 import random
 import torch
 import torch.nn as nn
@@ -25,7 +24,7 @@ from model_architectures import Generator, Discriminator, weights_init
 def main(args):
     
     # Set random seed for reproducibility
-    manualSeed = 999
+    manualSeed = 42
     print("Random Seed: ", manualSeed)
     random.seed(manualSeed)
     torch.manual_seed(manualSeed)
@@ -37,7 +36,10 @@ def main(args):
     train_data, dataloader = load_data(data_root=args['data_root'])
     
     # Create the generator
-    netG = Generator(args['n_gpus']).to(device)
+    netG = Generator(args['n_gpus'],
+                     args['z_gen_dims'],
+                     args['fmap_gen_dims'],
+                     args['n_channels']).to(device)
     
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (args['n_gpus'] > 1):
@@ -51,7 +53,9 @@ def main(args):
     print(netG)
 
     # Create the Discriminator
-    netD = Discriminator(args['n_gpus']).to(device)
+    netD = Discriminator(args['n_gpus'],
+                         args['fmap_disc_dims'],
+                         args['n_channels']).to(device)
     
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (args['n_gpus'] > 1):
