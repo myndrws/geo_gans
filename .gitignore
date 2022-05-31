@@ -133,3 +133,6 @@ dmypy.json
 
 # pycharm
 /.idea
+
+# config
+config.py
