@@ -1,17 +1,21 @@
 import matplotlib.pyplot as plt
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from torchgeo.datasets import BigEarthNet
 from config import get_args
 
 
 # load train data from sentinel 2
-def load_data(data_root, batch_size=64):
+def load_data(data_root, batch_size=64, subset=False):
     train_data = BigEarthNet(root=data_root,
                              split='train',
                              bands='s2',
                              num_classes=43,
                              transforms=None,
                              download=False)
+
+    if subset:
+        sub_inds = list(range(128))
+        train_data = Subset(train_data, sub_inds)
 
     dataloader = DataLoader(train_data,
                             batch_size=batch_size,

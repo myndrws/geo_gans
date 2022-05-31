@@ -33,7 +33,7 @@ def main(args):
     device = torch.device("cuda:0" if (torch.cuda.is_available() and args["n_gpus"] > 0) else "cpu")
     
     # load data
-    train_data, dataloader = load_data(data_root=args['data_root'])
+    train_data, dataloader = load_data(data_root=args['data_root'], subset=args['subset_data'])
     
     # Create the generator
     netG = Generator(args['n_gpus'],
@@ -102,7 +102,7 @@ def main(args):
             ## Train with all-real batch
             netD.zero_grad()
             # Format batch
-            real_cpu = data[0].to(device)
+            real_cpu = data['image'].to(device)
             b_size = real_cpu.size(0)
             label = torch.full((b_size,), real_label, dtype=torch.float, device=device)
             # Forward pass real batch through D
@@ -192,7 +192,7 @@ def main(args):
 if __name__ == "__main__":
 
     # get args
-    args = get_args()
+    args = get_args(bash_parser=True)
 
     # run main
     main(args)
