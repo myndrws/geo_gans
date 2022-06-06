@@ -21,11 +21,11 @@ class Generator(nn.Module):
         self.ngpu = ngpu
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(nz, ngf * 8, 7, 1, 1, bias=False),  # altered to have ksize=7 padding=1
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
             # state size. (ngf*8) x 4 x 4
-            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(ngf * 8, ngf * 4, 7, 2, 0, bias=False),  # altered to have ksize=7 and padding=0
             nn.BatchNorm2d(ngf * 4),
             nn.ReLU(True),
             # state size. (ngf*4) x 8 x 8
@@ -67,9 +67,44 @@ class Discriminator(nn.Module):
             nn.BatchNorm2d(ndf * 8),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ndf*8) x 4 x 4
-            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
+            nn.Conv2d(ndf * 8, 1, 7, 1, 0, bias=False),  # altered to have ksize=7
             nn.Sigmoid()
         )
 
     def forward(self, input):
         return self.main(input)
+
+
+if __name__ == "__main__":
+
+    from torchinfo import summary
+
+    # fix some args
+    nchannels = 12
+    batch_size = 64
+    im_size = 120
+    noise_dims = 100
+    discrim_dims = gen_dims = 64
+
+    # test input sizes
+    test_d_size = (batch_size, nchannels, im_size, im_size)
+    test_g_size = (batch_size, noise_dims, 1, 1)
+
+    # Create the Discriminator
+    netD = Discriminator(ngpu=0,
+                         ndf=discrim_dims,
+                         nc=nchannels).to("cpu")
+    netD.apply(weights_init)
+
+    # print summary of model
+    print(summary(netD, test_d_size))
+
+    # Create the generator
+    netG = Generator(ngpu=0,
+                     nz=noise_dims,
+                     ngf=gen_dims,
+                     nc=nchannels).to("cpu")
+    netG.apply(weights_init)
+
+    # print summary of model
+    print(summary(netG, test_g_size))
