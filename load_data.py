@@ -14,6 +14,7 @@ def load_data(data_root, batch_size=64, subset=False):
                              download=False)
 
     if subset:
+        # this is for testing the network
         sub_inds = list(range(128))
         train_data = Subset(train_data, sub_inds)
 

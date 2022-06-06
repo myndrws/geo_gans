@@ -13,6 +13,7 @@ import torchvision.transforms as transforms
 import torchvision.utils as vutils
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 import matplotlib.animation as animation
 from IPython.display import HTML
 
@@ -22,6 +23,11 @@ from model_architectures import Generator, Discriminator, weights_init
 
 
 def main(args):
+
+    # print args to console
+    print(f"Using args: {args}")
+    print(datetime.now().strftime("%H:%M:%S"))
+
     # Set random seed for reproducibility
     manualSeed = 42
     print("Random Seed: ", manualSeed)
