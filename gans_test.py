@@ -5,17 +5,12 @@ import random
 import torch
 import torch.nn as nn
 import torch.nn.parallel
-import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
-import torchvision.datasets as dset
-import torchvision.transforms as transforms
 import torchvision.utils as vutils
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
-import matplotlib.animation as animation
-from IPython.display import HTML
 
 from config import get_args
 from load_data import load_data
@@ -204,6 +199,7 @@ def main(args):
 
 
 if __name__ == "__main__":
+
     # get args
     args = get_args(bash_parser=False)
 
