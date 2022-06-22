@@ -145,6 +145,7 @@ class BigEarthNetModified(VisionDataset):
             self.class2idx = {c: i for i, c in enumerate(self.class_sets[1])}
         else:
             self.class2idx = {c: i for i, c in enumerate(self.class_sets[7])}
+        self.num_classes = len(self.class2idx.items())
         self.folders = self._load_folders()
 
     def __getitem__(self, index: int) -> Dict[str, Tensor]:
@@ -187,13 +188,41 @@ class BigEarthNetModified(VisionDataset):
             lines = f.read().strip().splitlines()
             pairs = [line.split(",") for line in lines]
 
-        folders = [
-            {
-                "s2": os.path.join(self.root, dir_s2, pair[0]),
-            }
-            for pair in pairs
-        ]
+        # addition of condition for filtering folders to just ones with labels we want
+        # for now can add the additional condition of only doing this when we know
+        # that we are reducing the labels desired
+        if self.peat_only:
+            folders = [
+                {
+                    "s2": os.path.join(self.root, dir_s2, pair[0]),
+                }
+                for pair in pairs if self._refine_folders(pair)
+            ]
+        else:
+            folders = [
+                {
+                    "s2": os.path.join(self.root, dir_s2, pair[0]),
+                }
+                for pair in pairs
+            ]
+
         return folders
+
+    def _refine_folders(self, pair):
+        """Filters to only retain folders meeting class conditions.
+
+        :return:
+        """
+
+        dir_s2 = self.metadata["s2"]["directory"]
+        lab_file = pair[0] + '_labels_metadata.json'
+        fp = os.path.join(self.root, dir_s2, pair[0], lab_file)
+        with open(fp, 'r') as f:
+            jsonfile = json.loads(f.read())
+        if np.isin(list(self.class2idx.keys()), jsonfile["labels"]):
+            return True
+        else:
+            return False
 
     def _load_paths(self, index: int) -> List[str]:
         """Load paths to band files.
@@ -256,24 +285,12 @@ class BigEarthNetModified(VisionDataset):
         return target
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 if __name__ == "__main__":
+
     args = get_args()
+
+    train_subset = BigEarthNetModified(root=args['data_root'])
+
     train_data, dataloader = load_data(data_root=args['data_root'])
     train_dict = next(iter(dataloader))
     print(f"Feature batch shape: {train_dict['image'].size()}")
