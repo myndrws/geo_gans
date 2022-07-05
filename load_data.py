@@ -1,31 +1,5 @@
-import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, Subset
-from torchgeo.datasets import BigEarthNet
 from config import get_args
-
-
-# load train data from sentinel 2
-def load_data(data_root, batch_size=64, subset=False, peat_only=True):
-    train_data = BigEarthNet(root=data_root,
-                             split='train',
-                             bands='s2',
-                             num_classes=43,
-                             transforms=None,
-                             download=False)
-
-    if subset:
-        # this is for testing the network
-        sub_inds = list(range(128))
-        train_data = Subset(train_data, sub_inds)
-
-    dataloader = DataLoader(train_data,
-                            batch_size=batch_size,
-                            shuffle=True)
-
-    return train_data, dataloader
-
-# re-writing class for BigEarthNet modified dataset
-# https://torchgeo.readthedocs.io/en/latest/_modules/torchgeo/datasets/bigearthnet.html#BigEarthNet.__getitem__
 
 import glob
 import json
@@ -41,6 +15,29 @@ from torch import Tensor
 
 from torchgeo.datasets import VisionDataset
 
+
+# load train data from sentinel 2
+def load_data(data_root: str, batch_size=64, subset=False, n_c="three", peat_only=True):
+    train_data = BigEarthNetModified(root=data_root,
+                                     split="train",
+                                     n_channels=n_c,
+                                     peat_only=peat_only)
+
+    if subset:
+        # this is for testing the network
+        sub_inds = list(range(128))
+        train_data = Subset(train_data, sub_inds)
+
+    dataloader = DataLoader(train_data,
+                            batch_size=batch_size,
+                            shuffle=True)
+
+    return train_data, dataloader
+
+
+# re-writing functions and classes for BigEarthNet modified dataset
+# https://torchgeo.readthedocs.io/en/latest/_modules/torchgeo/datasets/bigearthnet.html#BigEarthNet.__getitem__
+# licenced under MIT so usable here
 def sort_sentinel2_bands(x: str) -> str:
     """Sort Sentinel-2 band files in the correct order."""
     x = os.path.basename(x).split("_")[-1]
@@ -48,6 +45,7 @@ def sort_sentinel2_bands(x: str) -> str:
     if x == "B8A":
         x = "B08A"
     return x
+
 
 class BigEarthNetModified(VisionDataset):
     """Modified version of the BigEarthNet dataset.
@@ -68,6 +66,10 @@ class BigEarthNetModified(VisionDataset):
     * 2 synthetic aperture radar bands (120x120 px)
     * 43 or 19 scene classes from the 2018 CORINE Land Cover database (CLC 2018)
 
+    ADDITIONAL FEATURES FOR THE MODIFIED CLASS:
+    * Ability to choose for only RGB channels
+    * Ability to choose only the peatland class or all classes in the downloaded set
+
     Dataset format:
 
     * images are composed of multiple single channel geotiffs
@@ -86,12 +88,12 @@ class BigEarthNetModified(VisionDataset):
 
     class_sets = {
         7: {'Land principally occupied by agriculture, with significant areas of natural vegetation': 20,
-                  'Mixed forest': 22,
-                  'Moors and heathland': 23,
-                  'Pastures': 27,
-                  'Peatbogs': 28,
-                  'Salt marshes': 34,
-                  'Water courses': 42},
+            'Mixed forest': 22,
+            'Moors and heathland': 23,
+            'Pastures': 27,
+            'Peatbogs': 28,
+            'Salt marshes': 34,
+            'Water courses': 42},
         1: {'Peatbogs': 28},
     }
 
@@ -127,12 +129,12 @@ class BigEarthNetModified(VisionDataset):
     }
 
     def __init__(
-        self,
-        root: str = "data",
-        split: str = "train",
-        n_channels: str = "all",   # or three
-        peat_only: bool = True,    # or seven
-        transforms: Optional[Callable[[Dict[str, Tensor]], Dict[str, Tensor]]] = None,
+            self,
+            root: str = "data",
+            split: str = "train",
+            n_channels: str = "all",  # or three
+            peat_only: bool = True,  # or seven
+            transforms: Optional[Callable[[Dict[str, Tensor]], Dict[str, Tensor]]] = None,
     ) -> None:
 
         assert split in self.splits_metadata
@@ -173,7 +175,6 @@ class BigEarthNetModified(VisionDataset):
             length of the dataset
         """
         return len(self.folders)
-
 
     def _load_folders(self) -> List[Dict[str, str]]:
         """Load folder paths.
@@ -226,6 +227,7 @@ class BigEarthNetModified(VisionDataset):
 
     def _load_paths(self, index: int) -> List[str]:
         """Load paths to band files.
+        Include only rgb files if nchannels=3
 
         Args:
             index: index to return
@@ -234,12 +236,19 @@ class BigEarthNetModified(VisionDataset):
             list of file paths
         """
         folder = self.folders[index]["s2"]
-        paths = glob.glob(os.path.join(folder, "*.tif"))
+        if self.n_channels == "three":
+            # using https://gisgeography.com/sentinel-2-bands-combinations/ keys
+            # to filter to only rgb bands
+            paths = glob.glob(os.path.join(folder, "*[0][234].tif"))
+        else:
+            paths = glob.glob(os.path.join(folder, "*.tif"))
         paths = sorted(paths, key=sort_sentinel2_bands)
+
         return paths
 
     def _load_image(self, index: int) -> Tensor:
         """Load a single image.
+        If restricted channels then load only rgb data.
 
         Args:
             index: index to return
@@ -278,25 +287,23 @@ class BigEarthNetModified(VisionDataset):
         with open(path) as f:
             labels = json.load(f)["labels"]
 
-        # labels -> indices
-        indices = [self.class2idx[label] for label in labels]
+        # labels -> indices - ensuring correct for labels used to subset
+        indices = [self.class2idx[label] for label in labels if label in self.class2idx.keys()]
         target = torch.zeros(self.num_classes, dtype=torch.long)
         target[indices] = 1
         return target
 
 
 if __name__ == "__main__":
-
     args = get_args()
 
-    train_subset = BigEarthNetModified(root=args['data_root'])
-
-    train_data, dataloader = load_data(data_root=args['data_root'])
+    train_data, dataloader = load_data(data_root=args['data_root'] )
     train_dict = next(iter(dataloader))
+
     print(f"Feature batch shape: {train_dict['image'].size()}")
     print(f"Labels batch shape: {train_dict['label'].size()}")
-    img = train_dict['image'][0].squeeze()[1, :, :]
+    img = torch.einsum('ijk->kji', train_dict['image'][0].squeeze())
     label = train_dict['label'][0]
-    plt.imshow(img, cmap="gray")
+    plt.imshow(img / img.max())
     plt.show()
     print(f"Label: {label}")
