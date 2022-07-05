@@ -19,13 +19,20 @@ class Generator(nn.Module):
     def __init__(self, ngpu, nz, ngf, nc):
         super(Generator, self).__init__()
         self.ngpu = ngpu
+
+        # set changeable kernels dependent on nchannels
+        ksize_1 = 7
+        pad_1 = 1
+        ksize_2 = 7
+        pad_2 = 0
+
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(nz, ngf * 8, 7, 1, 1, bias=False),  # altered to have ksize=7 padding=1
+            nn.ConvTranspose2d(nz, ngf * 8, ksize_1, 1, pad_1, bias=False),
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
             # state size. (ngf*8) x 4 x 4
-            nn.ConvTranspose2d(ngf * 8, ngf * 4, 7, 2, 0, bias=False),  # altered to have ksize=7 and padding=0
+            nn.ConvTranspose2d(ngf * 8, ngf * 4, ksize_2, 2, pad_2, bias=False),
             nn.BatchNorm2d(ngf * 4),
             nn.ReLU(True),
             # state size. (ngf*4) x 8 x 8
@@ -50,6 +57,14 @@ class Discriminator(nn.Module):
     def __init__(self, ngpu, ndf, nc):
         super(Discriminator, self).__init__()
         self.ngpu = ngpu
+
+        # set changeable kernel for final
+        # convolution, dependent on number of channels
+        if nc == 3:
+            final_kernel_size = 7
+        else:
+            final_kernel_size = 4
+
         self.main = nn.Sequential(
             # input is (nc) x 64 x 64
             nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
@@ -67,7 +82,7 @@ class Discriminator(nn.Module):
             nn.BatchNorm2d(ndf * 8),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ndf*8) x 4 x 4
-            nn.Conv2d(ndf * 8, 1, 7, 1, 0, bias=False),  # altered to have ksize=7
+            nn.Conv2d(ndf * 8, 1, final_kernel_size, 1, 0, bias=False),
             nn.Sigmoid()
         )
 
@@ -80,7 +95,7 @@ if __name__ == "__main__":
     from torchinfo import summary
 
     # fix some args
-    nchannels = 12
+    nchannels = 3  #12
     batch_size = 64
     im_size = 120
     noise_dims = 100
