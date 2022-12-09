@@ -163,7 +163,7 @@ def main(args):
                 with torch.no_grad():
                     fake = netG(fixed_noise).detach().cpu()
                 # fake is sliced for visualisation using 16 images and rgb channels
-                img_list.append(vutils.make_grid(fake[:16, 1:4, :, :], normalize=True))
+                img_list.append(vutils.make_grid(fake[:16, :, :, :], normalize=True))
 
             iters += 1
 
@@ -186,7 +186,7 @@ def main(args):
     plt.subplot(1, 2, 1)
     plt.axis("off")
     plt.title("Real Images")
-    pltimgs = real_batch['image'].to(device).float()[:16, 1:4, :, :]
+    pltimgs = real_batch['image'].to(device).float()[:16, :, :, :]
     plt.imshow(np.transpose(vutils.make_grid(pltimgs, normalize=True).cpu()))
 
     # Plot the fake images from the last epoch
