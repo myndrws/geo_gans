@@ -10,7 +10,7 @@ import torchvision.utils as vutils
 from torchvision import transforms
 from load_data import BigEarthNetModified
 from torch.utils.data import DataLoader, Subset
-from torchvision.transforms import FiveCrop, Lambda, PILToTensor
+from torchvision.transforms import FiveCrop, Lambda
 import torch
 
 _, dataloader = load_data(data_root=args.data_root,
@@ -113,7 +113,7 @@ for image in [top_left, top_right, bottom_left, bottom_right, center]:
 # define a transforms on whole set
 im_transforms = transforms.Compose([
     transforms.Normalize(mean, std),
-    FiveCrop(size=(64, 64)),  # this is a list of PIL Images
+    FiveCrop(size=(64, 64)),
     Lambda(lambda crops: torch.stack(crops))  # returns a 4D tensor
 ])
 

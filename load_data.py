@@ -14,14 +14,38 @@ from rasterio.enums import Resampling
 from torch import Tensor
 
 from torchgeo.datasets import VisionDataset
-
+from torchvision import transforms
+import torch
 
 # load train data from sentinel 2
-def load_data(data_root: str, batch_size=128, subset=False, n_c="three", peat_only=True):
-    train_data = BigEarthNetModified(root=data_root,
-                                     split="train",
-                                     n_channels=n_c,
-                                     peat_only=peat_only)
+def load_data(data_root: str,
+              args,
+              batch_size: int= 128,
+              subset: bool = False,
+              n_c: str ="three",
+              peat_only: bool = True,
+              do_transforms: bool = True):
+
+    # transforms
+    if do_transforms:
+        args.data_mean = torch.tensor(args.data_mean, dtype=torch.float64)
+        args.data_std = torch.tensor(args.data_std, dtype=torch.float64)
+        im_transforms = transforms.Compose([
+            transforms.Normalize(args.data_mean, args.data_std),
+            transforms.FiveCrop(size=(args.image_size, args.image_size)),
+            transforms.Lambda(lambda crops: torch.stack(crops))
+        ])
+
+        train_data = BigEarthNetModified(root=data_root,
+                                         split="train",
+                                         n_channels=n_c,
+                                         peat_only=peat_only,
+                                         transforms=im_transforms)
+    else:
+        train_data = BigEarthNetModified(root=data_root,
+                                         split="train",
+                                         n_channels=n_c,
+                                         peat_only=peat_only)
 
     if subset:
         # this is for testing the network
@@ -295,13 +319,13 @@ class BigEarthNetModified(VisionDataset):
 
 if __name__ == "__main__":
 
-    import torchvision.transforms as T
-
     train_data, dataloader = load_data(data_root=args.data_root,
+                                       args=args,
                                        batch_size=128,
                                        subset=False,
                                        n_c="three",
-                                       peat_only=True)
+                                       peat_only=True,
+                                       do_transforms=False)
     train_dict = next(iter(dataloader))
 
     print(f"Feature batch shape: {train_dict['image'].size()}")
@@ -309,7 +333,7 @@ if __name__ == "__main__":
     im_number = 47
     img = train_dict['image'][im_number].squeeze()
     img = img / img.max()  # this normalises the image
-    transform = T.ToPILImage()
+    transform = transforms.ToPILImage()
     img2 = transform(img)
     label = train_dict['label'][im_number]
     plt.imshow(img2)
