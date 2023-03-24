@@ -14,32 +14,31 @@ def weights_init(m):
 
 
 # Generator Code
-
 class Generator(nn.Module):
-    def __init__(self, ngpu):
+    def __init__(self, ngpu, args):
         super(Generator, self).__init__()
         self.ngpu = ngpu
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d( nz, ngf * 8, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(ngf * 8),
+            nn.ConvTranspose2d(args.z_gen_dims, args.fmap_gen_dims * 8, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(args.fmap_gen_dims * 8),
             nn.ReLU(True),
-            # state size. (ngf*8) x 4 x 4
-            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf * 4),
+            # state size. (args.fmap_gen_dims*8) x 4 x 4
+            nn.ConvTranspose2d(args.fmap_gen_dims * 8, args.fmap_gen_dims * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(args.fmap_gen_dims * 4),
             nn.ReLU(True),
-            # state size. (ngf*4) x 8 x 8
-            nn.ConvTranspose2d( ngf * 4, ngf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf * 2),
+            # state size. (args.fmap_gen_dims*4) x 8 x 8
+            nn.ConvTranspose2d(args.fmap_gen_dims * 4, args.fmap_gen_dims * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(args.fmap_gen_dims * 2),
             nn.ReLU(True),
-            # state size. (ngf*2) x 16 x 16
-            nn.ConvTranspose2d( ngf * 2, ngf, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf),
+            # state size. (args.fmap_gen_dims*2) x 16 x 16
+            nn.ConvTranspose2d(args.fmap_gen_dims * 2, args.fmap_gen_dims, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(args.fmap_gen_dims),
             nn.ReLU(True),
-            # state size. (ngf) x 32 x 32
-            nn.ConvTranspose2d( ngf, nc, 4, 2, 1, bias=False),
+            # state size. (args.fmap_gen_dims) x 32 x 32
+            nn.ConvTranspose2d(args.fmap_gen_dims, args.n_channels, 4, 2, 1, bias=False),
             nn.Tanh()
-            # state size. (nc) x 64 x 64
+            # state size. (args.n_channels) x 64 x 64
         )
 
     def forward(self, input):
@@ -47,27 +46,27 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, ngpu):
+    def __init__(self, ngpu, args):
         super(Discriminator, self).__init__()
         self.ngpu = ngpu
         self.main = nn.Sequential(
-            # input is (nc) x 64 x 64
-            nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
+            # input is (args["n_channels"]) x 64 x 64
+            nn.Conv2d(args.n_channels, args.fmap_disc_dims, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf) x 32 x 32
-            nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 2),
+            # state size. (args.fmap_disc_dims) x 32 x 32
+            nn.Conv2d(args.fmap_disc_dims, args.fmap_disc_dims * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(args.fmap_disc_dims * 2),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*2) x 16 x 16
-            nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 4),
+            # state size. (args.fmap_disc_dims*2) x 16 x 16
+            nn.Conv2d(args.fmap_disc_dims * 2, args.fmap_disc_dims * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(args.fmap_disc_dims * 4),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*4) x 8 x 8
-            nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 8),
+            # state size. (args.fmap_disc_dims*4) x 8 x 8
+            nn.Conv2d(args.fmap_disc_dims * 4, args.fmap_disc_dims * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(args.fmap_disc_dims * 8),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*8) x 4 x 4
-            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
+            # state size. (args.fmap_disc_dims*8) x 4 x 4
+            nn.Conv2d(args.fmap_disc_dims * 8, 1, 4, 1, 0, bias=False),
             nn.Sigmoid()
         )
 
@@ -78,25 +77,21 @@ class Discriminator(nn.Module):
 if __name__ == "__main__":
 
     from torchinfo import summary
-
-    # fix some args
-    import json
-    with open('config.json') as json_file:
-        args = json.load(json_file)
+    from config import args
 
     # test input sizes
-    test_d_size = (args["batch_size"], args["n_channels"], args["image_size"], args["image_size"])
-    test_g_size = (args["batch_size"], args["z_gen_dims"], 1, 1)
+    test_d_size = (args.batch_size, args.n_channels, args.image_size, args.image_size)
+    test_g_size = (args.batch_size, args.z_gen_dims, 1, 1)
 
     # Create the Discriminator
-    netD = Discriminator(ngpu=0).to("cpu")
+    netD = Discriminator(ngpu=0, args=args).to("cpu")
     netD.apply(weights_init)
 
     # print summary of model
     print(summary(netD, test_d_size))
 
     # Create the generator
-    netG = Generator(ngpu=0).to("cpu")
+    netG = Generator(ngpu=0, args=args).to("cpu")
     netG.apply(weights_init)
 
     # print summary of model

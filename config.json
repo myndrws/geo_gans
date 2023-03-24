@@ -1,0 +1,15 @@
+{
+    "data_root": "C:/Users/amy_c/Documents/Projects/geo_gans/ben_data",
+    "workers": 2,
+    "batch_size": 128,
+    "image_size": 64,
+    "n_channels": 3,
+    "z_gen_dims": 100,
+    "fmap_gen_dims": 64,
+    "fmap_disc_dims": 64,
+    "epochs": 5,
+    "lr": 0.0002,
+    "adam_b1": 0.5,
+    "n_gpus": 0,
+    "subset_data": 0
+}
