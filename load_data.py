@@ -1,5 +1,5 @@
 from torch.utils.data import DataLoader, Subset
-from config import get_args
+from config import args
 
 import glob
 import json
@@ -17,7 +17,7 @@ from torchgeo.datasets import VisionDataset
 
 
 # load train data from sentinel 2
-def load_data(data_root: str, batch_size=64, subset=False, n_c="three", peat_only=True):
+def load_data(data_root: str, batch_size=128, subset=False, n_c="three", peat_only=True):
     train_data = BigEarthNetModified(root=data_root,
                                      split="train",
                                      n_channels=n_c,
@@ -25,7 +25,7 @@ def load_data(data_root: str, batch_size=64, subset=False, n_c="three", peat_onl
 
     if subset:
         # this is for testing the network
-        sub_inds = list(range(128))
+        sub_inds = list(range(batch_size))
         train_data = Subset(train_data, sub_inds)
 
     dataloader = DataLoader(train_data,
@@ -295,15 +295,24 @@ class BigEarthNetModified(VisionDataset):
 
 
 if __name__ == "__main__":
-    args = get_args()
 
-    train_data, dataloader = load_data(data_root=args['data_root'] )
+    import torchvision.transforms as T
+
+    train_data, dataloader = load_data(data_root=args.data_root,
+                                       batch_size=128,
+                                       subset=False,
+                                       n_c="three",
+                                       peat_only=True)
     train_dict = next(iter(dataloader))
 
     print(f"Feature batch shape: {train_dict['image'].size()}")
     print(f"Labels batch shape: {train_dict['label'].size()}")
-    img = torch.einsum('ijk->kji', train_dict['image'][0].squeeze())
-    label = train_dict['label'][0]
-    plt.imshow(img / img.max())
+    im_number = 47
+    img = train_dict['image'][im_number].squeeze()
+    img = img / img.max()  # this normalises the image
+    transform = T.ToPILImage()
+    img2 = transform(img)
+    label = train_dict['label'][im_number]
+    plt.imshow(img2)
     plt.show()
     print(f"Label: {label}")
