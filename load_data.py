@@ -134,7 +134,7 @@ class BigEarthNetModified(VisionDataset):
             split: str = "train",
             n_channels: (str or int) = "all",  # or three
             peat_only: bool = True,  # or seven
-            transforms: Optional[Callable[[Dict[str, Tensor]], Dict[str, Tensor]]] = None,
+            transforms = None,
     ) -> None:
 
         assert split in self.splits_metadata
@@ -159,12 +159,11 @@ class BigEarthNetModified(VisionDataset):
         Returns:
             data and label at that index
         """
-        image = self._load_image(index)
-        label = self._load_target(index)
-        sample: Dict[str, Tensor] = {"image": image, "label": label}
 
-        if self.transforms is not None:
-            sample = self.transforms(sample)
+        sample = {
+            "image": self._load_image(index) if self.transforms is None else self.transforms(self._load_image(index)),
+            "label": self._load_target(index)
+        }
 
         return sample
 
@@ -265,7 +264,7 @@ class BigEarthNetModified(VisionDataset):
                 array = dataset.read(
                     indexes=1,
                     out_shape=self.image_size,
-                    out_dtype="int32",
+                    out_dtype="float",
                     resampling=Resampling.bilinear,
                 )
                 images.append(array)
