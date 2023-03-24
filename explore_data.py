@@ -111,29 +111,30 @@ for image in [top_left, top_right, bottom_left, bottom_right, center]:
 
 # first try out dataset and dataloading separately
 # define a transforms on whole set
-transforms = transforms.Compose([
+im_transforms = transforms.Compose([
     transforms.Normalize(mean, std),
     FiveCrop(size=(64, 64)),  # this is a list of PIL Images
-    Lambda(lambda crops: torch.stack([PILToTensor()(crop) for crop in crops]))  # returns a 4D tensor
+    Lambda(lambda crops: torch.stack(crops))  # returns a 4D tensor
 ])
-
-#In your test loop you can do the following:
-# input, target = batch # input is a 5d tensor, target is 2d
-# bs, ncrops, c, h, w = input.size()
-# result = model(input.view(-1, c, h, w)) # fuse batch size and ncrops
-# result_avg = result.view(bs, ncrops, -1).mean(1) # avg over crops
 
 # load in with transforms
 train_data_full = BigEarthNetModified(root=args.data_root,
                                       split="train",
                                       n_channels=args.n_channels,
                                       peat_only=True,
-                                      transforms=transforms)
+                                      transforms=im_transforms)
 
 # load in only a subset
 train_data_subset = Subset(train_data_full, list(range(args.batch_size)))
 dataloader2 = DataLoader(train_data_subset, batch_size=args.batch_size, shuffle=True)
 
 real_batch = next(iter(dataloader2))
-real_batch_cpu = real_batch['image'].to("cpu").float()
-visualise_batch(batch=real_batch_cpu, with_max_normalisaton=False)
+
+# from fivecrop documentation - can replicate within modelling
+input = real_batch["image"]  # input is a 5d tensor, target is 2d
+bs, ncrops, c, h, w = input.size()
+result = input.view(-1, c, h, w) # fuse batch size and ncrops
+result_avg = result.view(bs, ncrops, -1).mean(1) # avg over crops
+
+real_batch_cpu = result.to("cpu").float()
+visualise_batch(batch=real_batch_cpu, with_max_normalisaton=True)
