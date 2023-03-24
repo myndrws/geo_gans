@@ -132,7 +132,7 @@ class BigEarthNetModified(VisionDataset):
             self,
             root: str = "data",
             split: str = "train",
-            n_channels: str = "all",  # or three
+            n_channels: (str or int) = "all",  # or three
             peat_only: bool = True,  # or seven
             transforms: Optional[Callable[[Dict[str, Tensor]], Dict[str, Tensor]]] = None,
     ) -> None:
@@ -236,7 +236,7 @@ class BigEarthNetModified(VisionDataset):
             list of file paths
         """
         folder = self.folders[index]["s2"]
-        if self.n_channels == "three":
+        if self.n_channels in ["three", "3", 3]:
             # using https://gisgeography.com/sentinel-2-bands-combinations/ keys
             # to filter to only rgb bands
             paths = glob.glob(os.path.join(folder, "*[0][234].tif"))

@@ -7,9 +7,9 @@ from matplotlib import pyplot as plt
 import numpy as np
 import torchvision.utils as vutils
 
-train_data, dataloader = load_data(data_root=args.data_root,
-                                   batch_size=args.batch_size,
-                                   subset=True)
+_, dataloader = load_data(data_root=args.data_root,
+                          batch_size=args.batch_size,
+                          subset=True)
 
 real_batch = next(iter(dataloader))
 real_batch_cpu = real_batch['image'].to("cpu").float()
@@ -73,3 +73,29 @@ for image in [top_left, top_right, bottom_left, bottom_right, center]:
     plt.imshow(image.permute(2, 1, 0).numpy())
     plt.show()
 
+###########################################################
+# apply transforms to a whole batch as POC for dataloader
+###########################################################
+
+# first try out dataset and dataloading separately
+from load_data import BigEarthNetModified
+from torch.utils.data import DataLoader, Subset
+
+# define a normalisation transform on whole set
+transforms = transforms.Compose([
+    transforms.Normalize(mean, std)
+])
+
+# load in with transforms
+train_data_full = BigEarthNetModified(root=args.data_root,
+                                      split="train",
+                                      n_channels=args.n_channels,
+                                      peat_only=True,
+                                      transforms=transform_norm)
+
+# load in only a subset
+train_data_subset = Subset(train_data_full, list(range(args.batch_size)))
+dataloader2 = DataLoader(train_data_subset, batch_size=args.batch_size, shuffle=True)
+
+real_batch = next(iter(dataloader2))
+real_batch_cpu = real_batch['image'].to("cpu").float()
